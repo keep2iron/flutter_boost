@@ -20,6 +20,7 @@ import androidx.annotation.Nullable;
 import android.view.*;
 import android.widget.*;
 import com.idlefish.flutterboost.FlutterBoost;
+import com.idlefish.flutterboost.SerializableCompatUtil;
 import com.idlefish.flutterboost.XFlutterView;
 import com.idlefish.flutterboost.XPlatformPlugin;
 import io.flutter.Log;
@@ -99,9 +100,9 @@ public class BoostFlutterActivity extends Activity
 
 
         public Intent build(@NonNull Context context) {
-
-            SerializableMap serializableMap = new SerializableMap();
-            serializableMap.setMap(params);
+//            SerializableMap serializableMap = new SerializableMap();
+//            serializableMap.setMap(params);
+            SerializableMap serializableMap = SerializableCompatUtil.compatMap(params);
 
             return new Intent(context, activityClass)
                     .putExtra(EXTRA_BACKGROUND_MODE, backgroundMode)
@@ -482,7 +483,8 @@ public class BoostFlutterActivity extends Activity
 
         if (getIntent().hasExtra(EXTRA_PARAMS)) {
             SerializableMap serializableMap = (SerializableMap) getIntent().getSerializableExtra(EXTRA_PARAMS);
-            return serializableMap.getMap();
+            assert serializableMap != null;
+            return SerializableCompatUtil.compatSerializableMap(serializableMap);
         }
 
         Map<String, Object> params = new HashMap<>();

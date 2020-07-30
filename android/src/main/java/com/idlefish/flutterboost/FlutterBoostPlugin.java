@@ -250,6 +250,41 @@ public class FlutterBoostPlugin {
                     }
                 }
                 break;
+                case "closeAndOpenPage": {
+                    try {
+                        String uniqueId = methodCall.argument("uniqueId");
+                        Map<String, Object> resultExts = methodCall.argument("resultExts");
+                        Map<String, Object> resultData = methodCall.argument("result");
+
+                        String url = methodCall.argument("url");
+                        Map<String, Object> exts = methodCall.argument("exts");
+                        Map<String, Object> urlParams = methodCall.argument("urlParams");
+
+                        mManager.closeContainer(uniqueId, resultData, resultExts);
+                        mManager.openContainer(url, urlParams, exts, new FlutterViewContainerManager.OnResult() {
+                            @Override
+                            public void onResult(Map<String, Object> rlt) {
+                                if (result != null) {
+                                    result.success(rlt);
+                                }
+                            }
+                        });
+                    } catch (Throwable t) {
+                        result.error("closeAndOpenPage page error", t.getMessage(), Log.getStackTraceString(t));
+                    }
+                }
+                break;
+                case "closeUntilPage": {
+                    try {
+                        String url = methodCall.argument("url");
+                        Map<String, Object> exts = methodCall.argument("exts");
+                        mManager.closeUntil(url, exts);
+                        result.success(null);
+                    } catch (Throwable t) {
+                        result.error("closeUntilPage page error", t.getMessage(), Log.getStackTraceString(t));
+                    }
+                }
+                break;
                 case "onShownContainerChanged": {
                     try {
                         String newId = methodCall.argument("newName");

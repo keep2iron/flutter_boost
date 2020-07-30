@@ -63,8 +63,6 @@ class FlutterBoost {
   final ObserversHolder _observersHolder = ObserversHolder();
   final BoostChannel _boostChannel = BoostChannel();
 
-
-
   static ContainerManagerState get containerManager =>
       _instance.containerManagerKey.currentState;
 
@@ -176,6 +174,65 @@ class FlutterBoost {
       properties['exts'] = exts;
     }
     return channel.invokeMethod<bool>('closePage', properties);
+  }
+
+  Future<Map<dynamic, dynamic>> closeAndOpen(
+    BuildContext context,
+    String url, {
+    Map<String, dynamic> result,
+    Map<String, dynamic> resultExts,
+    Map<String, dynamic> urlParams,
+    Map<String, dynamic> exts,
+  }) {
+    final Map<String, dynamic> properties = <String, dynamic>{};
+    properties['url'] = url;
+    properties['urlParams'] = urlParams;
+
+    final BoostContainerSettings settings = containerManager?.onstageSettings;
+    exts ??= <String, dynamic>{};
+
+    exts['params'] = settings.params;
+    if (!exts.containsKey('animated')) {
+      exts['animated'] = true;
+    }
+
+    if (!exts.containsKey('animated')) {
+      exts['animated'] = true;
+    }
+
+    properties['uniqueId'] = settings.uniqueId;
+
+    if (result != null) {
+      properties['result'] = result;
+    }
+
+    if (resultExts != null) {
+      properties['resultExts'] = resultExts;
+    }
+
+    properties['exts'] = exts;
+
+    return channel.invokeMethod<Map<dynamic, dynamic>>(
+        'closeAndOpenPage', properties);
+  }
+
+  Future<void> closeUntil(
+    String url, {
+    Map<String, dynamic> exts,
+  }) {
+    final Map<String, dynamic> properties = <String, dynamic>{};
+
+    properties['url'] = url;
+
+    exts ??= <String, dynamic>{};
+    if (!exts.containsKey('animated')) {
+      exts['animated'] = true;
+    }
+
+    properties['exts'] = exts;
+
+    return channel.invokeMethod<Map<dynamic, dynamic>>(
+        'closeUntilPage', properties);
   }
 
   Future<bool> closeCurrent({

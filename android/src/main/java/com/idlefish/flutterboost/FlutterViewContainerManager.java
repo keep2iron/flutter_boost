@@ -1,18 +1,18 @@
 /*
  * The MIT License (MIT)
- * 
+ *
  * Copyright (c) 2019 Alibaba Group
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -37,6 +37,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
@@ -47,9 +48,10 @@ public class FlutterViewContainerManager implements IContainerManager {
     private final Set<ContainerRef> mRefs = new HashSet<>();
     private final Stack<IContainerRecord> mRecordStack = new Stack<>();
 
-    private final Map<String,OnResult> mOnResults = new HashMap<>();
+    private final Map<String, OnResult> mOnResults = new HashMap<>();
 
-    FlutterViewContainerManager() {}
+    FlutterViewContainerManager() {
+    }
 
     @Override
     public IOperateSyncer generateSyncer(IFlutterViewContainer container) {
@@ -60,13 +62,13 @@ public class FlutterViewContainerManager implements IContainerManager {
             Debuger.exception("container:" + container.getContainerUrl() + " already exists!");
         }
 
-        mRefs.add(new ContainerRef(record.uniqueId(),container));
+        mRefs.add(new ContainerRef(record.uniqueId(), container));
 
         return record;
     }
 
     void pushRecord(IContainerRecord record) {
-        if(!mRecordMap.containsValue(record)) {
+        if (!mRecordMap.containsValue(record)) {
             Debuger.exception("invalid record!");
         }
 
@@ -74,9 +76,9 @@ public class FlutterViewContainerManager implements IContainerManager {
     }
 
     void popRecord(IContainerRecord record) {
-        if(mRecordStack.empty()) return;
+        if (mRecordStack.empty()) return;
 
-        if(mRecordStack.peek() == record) {
+        if (mRecordStack.peek() == record) {
             mRecordStack.pop();
         }
     }
@@ -91,22 +93,22 @@ public class FlutterViewContainerManager implements IContainerManager {
 
     }
 
-    void setContainerResult(IContainerRecord record,int requestCode, int resultCode, Map<String,Object> result) {
+    void setContainerResult(IContainerRecord record, int requestCode, int resultCode, Map<String, Object> result) {
 
         IFlutterViewContainer target = findContainerById(record.uniqueId());
-        if(target == null) {
-            Debuger.exception("setContainerResult error, url="+record.getContainer().getContainerUrl());
+        if (target == null) {
+            Debuger.exception("setContainerResult error, url=" + record.getContainer().getContainerUrl());
         }
 
         if (result == null) {
             result = new HashMap<>();
         }
 
-        result.put("_requestCode__",requestCode);
-        result.put("_resultCode__",resultCode);
+        result.put("_requestCode__", requestCode);
+        result.put("_resultCode__", resultCode);
 
         final OnResult onResult = mOnResults.remove(record.uniqueId());
-        if(onResult != null) {
+        if (onResult != null) {
             onResult.onResult(result);
         }
     }
@@ -115,34 +117,34 @@ public class FlutterViewContainerManager implements IContainerManager {
         return mRecordMap.get(container);
     }
 
-    void openContainer(String url, Map<String, Object> urlParams, Map<String, Object> exts,OnResult onResult) {
+    void openContainer(String url, Map<String, Object> urlParams, Map<String, Object> exts, OnResult onResult) {
         Context context = FlutterBoost.instance().currentActivity();
-        if(context == null) {
+        if (context == null) {
             context = FlutterBoost.instance().platform().getApplication();
         }
 
-        if(urlParams == null) {
+        if (urlParams == null) {
             urlParams = new HashMap<>();
         }
 
         int requestCode = 0;
         final Object v = urlParams.remove("requestCode");
-        if(v != null) {
+        if (v != null) {
             requestCode = Integer.valueOf(String.valueOf(v));
         }
 
         final String uniqueId = ContainerRecord.genUniqueId(url);
-        urlParams.put(IContainerRecord.UNIQ_KEY,uniqueId);
+        urlParams.put(IContainerRecord.UNIQ_KEY, uniqueId);
 
         IContainerRecord currentTopRecord = getCurrentTopRecord();
-        if(onResult != null&&currentTopRecord!=null) {
-            mOnResults.put(currentTopRecord.uniqueId(),onResult);
+        if (onResult != null && currentTopRecord != null) {
+            mOnResults.put(currentTopRecord.uniqueId(), onResult);
         }
 
-        FlutterBoost.instance().platform().openContainer(context,url,urlParams,requestCode,exts);
+        FlutterBoost.instance().platform().openContainer(context, url, urlParams, requestCode, exts);
     }
 
-    IContainerRecord closeContainer(String uniqueId, Map<String, Object> result,Map<String,Object> exts) {
+    IContainerRecord closeContainer(String uniqueId, Map<String, Object> result, Map<String, Object> exts) {
         IContainerRecord targetRecord = null;
         for (Map.Entry<IFlutterViewContainer, IContainerRecord> entry : mRecordMap.entrySet()) {
             if (TextUtils.equals(uniqueId, entry.getValue().uniqueId())) {
@@ -151,26 +153,42 @@ public class FlutterViewContainerManager implements IContainerManager {
             }
         }
 
-        if(targetRecord == null) {
+        if (targetRecord == null) {
             Debuger.exception("closeContainer can not find uniqueId:" + uniqueId);
         }
 
-        FlutterBoost.instance().platform().closeContainer(targetRecord,result,exts);
+        FlutterBoost.instance().platform().closeContainer(targetRecord, result, exts);
         return targetRecord;
+    }
+
+    void closeUntil(String containerUrl, Map<String, Object> exts) {
+        ListIterator<Map.Entry<IFlutterViewContainer, IContainerRecord>> iterator =
+                new ArrayList<>(
+                        mRecordMap.entrySet()).listIterator(mRecordMap.size());
+
+        while(iterator.hasPrevious()) {
+            Map.Entry<IFlutterViewContainer, IContainerRecord> entry = iterator.previous();
+            if (!TextUtils.equals(containerUrl, entry.getValue().getContainer().getContainerUrl())) {
+                IContainerRecord targetRecord = entry.getValue();
+                FlutterBoost.instance().platform().closeContainer(targetRecord, null, exts);
+            } else {
+                break;
+            }
+        }
     }
 
     @Override
     public IContainerRecord getCurrentTopRecord() {
-        if(mRecordStack.isEmpty()) return null;
+        if (mRecordStack.isEmpty()) return null;
         return mRecordStack.peek();
     }
 
     @Override
     public IContainerRecord getLastGenerateRecord() {
         final Collection<IContainerRecord> values = mRecordMap.values();
-        if(!values.isEmpty()) {
+        if (!values.isEmpty()) {
             final ArrayList<IContainerRecord> array = new ArrayList<>(values);
-            return array.get(array.size()-1);
+            return array.get(array.size() - 1);
         }
         return null;
     }
@@ -185,9 +203,9 @@ public class FlutterViewContainerManager implements IContainerManager {
             }
         }
 
-        if(target == null) {
-            for(ContainerRef ref:mRefs){
-                if(TextUtils.equals(uniqueId,ref.uniqueId)) {
+        if (target == null) {
+            for (ContainerRef ref : mRefs) {
+                if (TextUtils.equals(uniqueId, ref.uniqueId)) {
                     return ref.container.get();
                 }
             }
@@ -247,6 +265,6 @@ public class FlutterViewContainerManager implements IContainerManager {
     }
 
     interface OnResult {
-        void onResult(Map<String,Object> result);
+        void onResult(Map<String, Object> result);
     }
 }
